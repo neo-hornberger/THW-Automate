@@ -1,8 +1,17 @@
-FROM python:3.10-alpine
+FROM python:3.10-slim AS compile-image
+
+RUN apt-get update
+RUN apt-get install -y --no-install-recommends \
+	build-essential \
+	gcc
 
 COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt
+RUN pip install --user -r /app/requirements.txt
 
+
+FROM python:3.10-slim AS runtime-image
+
+COPY --from=compile-image /root/.local /root/.local
 COPY . /app
 
 WORKDIR /app
