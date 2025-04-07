@@ -1,0 +1,9 @@
+icalevents~=0.2.1
+imap_tools~=1.10.0
+mgrs~=1.5.0
+paho_mqtt~=2.1.0
+pycryptodome~=3.21.0
+python-socketio~=5.12.1
+Requests~=2.32.3
+schedule~=1.2.2
+toml~=0.10.2
