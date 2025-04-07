@@ -5,6 +5,8 @@ RUN apt-get install -y --no-install-recommends \
 	build-essential \
 	gcc
 
+RUN pip install --user packaging
+
 COPY requirements.txt /app/requirements.txt
 RUN pip install --user -r /app/requirements.txt
 
