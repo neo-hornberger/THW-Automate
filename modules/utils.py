@@ -1,4 +1,4 @@
-from functools import wraps
+from functools import wraps, cache
 from datetime import datetime
 from threading import Lock
 
@@ -22,3 +22,6 @@ def synchronized(func):
 		lock = _LOCKS[key] = Lock()
 
 	return inner
+
+def cached(func):
+	return wraps(cache(func))(func)

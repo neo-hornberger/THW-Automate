@@ -1,14 +1,13 @@
-from functools import cache
 import paho.mqtt.client as mqtt
 import logging
 
-from .utils import synchronized
+from .utils import synchronized, cached
 from lib.hermine import StashCatClient
 from lib.groupalarm import GroupalarmClient
 
 
 @synchronized
-@cache
+@cached
 def get_hermine_client(device_id: str | None, username: str, password: str, encryption_password: str) -> StashCatClient:
 	logging.info('Initializing Hermine client for user "%s"…', username)
 
@@ -21,7 +20,7 @@ def get_hermine_client(device_id: str | None, username: str, password: str, encr
 	return client
 
 @synchronized
-@cache
+@cached
 def get_groupalarm_client(api_key: str) -> GroupalarmClient:
 	logging.info('Initializing Groupalarm client…')
 
@@ -31,13 +30,14 @@ def get_groupalarm_client(api_key: str) -> GroupalarmClient:
 	return client
 
 @synchronized
-@cache
-def get_mqtt_client(host: str, port: int, username: str, password: str, client_id: str) -> mqtt.Client:
+@cached
+def get_mqtt_client(host: str, port: int, use_ssl: bool, username: str, password: str, client_id: str) -> mqtt.Client:
 	logging.info('Initializing MQTT client for user "%s"…', username)
 
 	client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id)
 	client.username_pw_set(username, password)
-	client.tls_set_context()
+	if use_ssl:
+		client.tls_set_context()
 	client.connect(host, port)
 
 	return client

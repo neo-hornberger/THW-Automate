@@ -34,7 +34,7 @@ def run(cfg: Config):
 	config = _Config(cfg)
 
 	hermine = get_hermine_client(config.hermine.device_id, config.hermine.username, config.hermine.password, config.hermine.encryption_password)
-	mqtt = get_mqtt_client(config.mqtt.host, config.mqtt.port, config.mqtt.username, config.mqtt.password, config.mqtt.client_id)
+	mqtt = get_mqtt_client(config.mqtt.host, config.mqtt.port, config.mqtt.use_ssl, config.mqtt.username, config.mqtt.password, config.mqtt.client_id)
 
 	logger.info('Module configured successfully')
 
