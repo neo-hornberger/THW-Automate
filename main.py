@@ -6,9 +6,11 @@ from modules import beflaggung, ausbildungsdienst, alarmierung
 
 
 def main():
-	logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(threadName)s %(name)s [%(levelname)s] %(message)s')
-	logging.info('Starting…')
 	config = Config('config.toml')
+
+	logging.basicConfig(level=config.logging.level, format='%(asctime)s %(threadName)s %(name)s [%(levelname)s] %(message)s')
+	logging.info('Starting…')
+	logging.debug('Logging level is set to %s', logging.getLevelName(config.logging.level))
 
 	targets = [
 		beflaggung.run,

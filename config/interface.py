@@ -1,4 +1,5 @@
-from typing import TypeAlias
+from typing import TypeAlias, Any
+from collections.abc import Callable
 import datetime
 
 
@@ -9,6 +10,10 @@ class IConfig:
 	def from_toml(self, data: TOMLDict) -> None:
 		raise NotImplementedError
 	
-	def set_value(self, attr_name: str, data: TOMLDict, *, key: str|None = None, default: TOMLData|None = None) -> None:
+	def set_value(self, attr_name: str, data: TOMLDict, *, key: str|None = None, default: TOMLData|None = None, converter: Callable[[Any], Any] = lambda x: x) -> None:
 		key = key or attr_name
-		setattr(self, attr_name, data.get(key, getattr(self, attr_name, default)))
+		try:
+			value = converter(data[key])
+		except KeyError:
+			value = getattr(self, attr_name, default)
+		setattr(self, attr_name, value)
