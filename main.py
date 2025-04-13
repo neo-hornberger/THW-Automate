@@ -4,8 +4,6 @@ from threading import Thread
 from config import Config
 from modules import beflaggung, ausbildungsdienst, alarmierung
 
-from modules.clients import get_mqtt_client
-
 
 def main():
 	config = Config('config.toml')
