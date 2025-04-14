@@ -1,6 +1,8 @@
 from functools import wraps, cache
-from datetime import datetime
+from datetime import datetime, timedelta
 from threading import Lock
+from schedule import Job, Scheduler
+from collections.abc import Callable
 
 
 def parse_datetime(date: str) -> datetime:
@@ -9,7 +11,6 @@ def parse_datetime(date: str) -> datetime:
 	return datetime.fromisoformat(date)
 
 _LOCKS = {}
-
 def synchronized(func):
 	@wraps(func)
 	def inner(*args, **kwargs):
@@ -25,3 +26,10 @@ def synchronized(func):
 
 def cached(func):
 	return wraps(func)(cache(func))
+
+def onetime_job(scheduler: Scheduler, time: datetime, job_func: Callable, *args, **kwargs) -> Job:
+	job = Job(1, scheduler).week
+	job.do(job_func, *args, **kwargs)
+	job.next_run = time
+	job.cancel_after = time + timedelta(minutes=10)
+	return job

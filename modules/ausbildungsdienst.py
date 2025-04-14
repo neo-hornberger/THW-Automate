@@ -1,12 +1,12 @@
 import logging
 import time
-from schedule import Scheduler
+from schedule import Scheduler, Job
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from config import Config, load_toml_data, HermineConfig, GroupalarmConfig
 from modules.clients import get_hermine_client, get_groupalarm_client
-from modules.utils import parse_datetime
+from modules.utils import parse_datetime, onetime_job
 
 
 class _Config:
@@ -14,6 +14,7 @@ class _Config:
 	groupalarm: GroupalarmConfig
 
 	scheduled_time: str
+	reminder_time: int
 	event_filters: list[str]
 	groupalarm_label: int|None
 	hermine_channel: int
@@ -25,6 +26,7 @@ class _Config:
 		self.groupalarm = load_toml_data(data.get('groupalarm'), cfg.groupalarm)
 
 		self.scheduled_time = data.get('scheduled_time', '12:00')
+		self.reminder_time = data.get('reminder_time', 10)
 		self.event_filters = data.get('event_filters', [])
 		self.groupalarm_label = data.get('groupalarm_label')
 		self.hermine_channel = data['hermine_channel']
@@ -41,17 +43,28 @@ def run(cfg: Config):
 
 	logger.info('Module configured successfully')
 
-	def _run():
-		label_persons = {}
+	label_persons = {}
+	def _update():
+		label_persons.clear()
+
 		if config.groupalarm_label is not None:
 			data = groupalarm.get_label(config.groupalarm_label)
-			label_persons = {
+			label_persons.update({
 				user['id']: user
 				for user in groupalarm.get_users()
 				if user['pending'] is False and user['id'] in data['assignees']
-			}
+			})
+		else:
+			label_persons.update({
+				user['id']: user
+				for user in groupalarm.get_users()
+				if user['pending'] is False
+			})
 
-		data = groupalarm.get_appointments(start=datetime.now(), end=datetime.today() + timedelta(weeks=1), type='organization')
+	def _run(timespan: timedelta) -> set[datetime]:
+		event_starts = set()
+
+		data = groupalarm.get_appointments(start=datetime.now(), end=datetime.now() + timespan, type='organization')
 		events = [event for event in data if _filter_events(event, config.event_filters)]
 		for event in events:
 			tz = ZoneInfo(event['timezone'])
@@ -61,6 +74,9 @@ def run(cfg: Config):
 			participants = [person for person in event['participants'] if _filter_participants(person, label_persons.keys())]
 			if len(participants) == 0:
 				continue
+
+			logger.info('Found event: %s %s', event['name'], start)
+			event_starts.add(start)
 
 			message = f'📅 **{event["name"]}**\n_{start:%A, %d.%m.%Y, %H:%M} – {end:%H:%M}_\n\n'
 			for participant in participants:
@@ -74,9 +90,18 @@ def run(cfg: Config):
 			
 			logger.debug('Sending message to Hermine: %s', message)
 			hermine.send_msg(('channel', config.hermine_channel), message, is_styled=True)
+		
+		return event_starts
+	
+	reminder_time = timedelta(hours=config.reminder_time)
+	def _weekly_run():
+		_update()
+		event_starts = _run(timedelta(weeks=1))
+		for event_start in event_starts:
+			onetime_job(scheduler, (event_start - reminder_time).replace(tzinfo=None), _run, reminder_time)
 
 	scheduler = Scheduler()
-	scheduler.every().sunday.at(config.scheduled_time).do(_run)
+	scheduler.every().sunday.at(config.scheduled_time).do(_weekly_run)
 
 	scheduler.run_all()
 	while True:

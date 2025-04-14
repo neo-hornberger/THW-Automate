@@ -52,6 +52,8 @@ def run(cfg: Config):
 				opt_content['address'],
 				_format_mgrs(lat, lon),
 			)
+		
+		logger.info('Received message for event: %s', data['event']['name'])
 
 		message = f'🚨 **{data["event"]["name"]}**\n_{data["event"]["severity"]["icon"]} {data["event"]["severity"]["name"]}_\n\n{data["message"]}'
 		if location is not None:

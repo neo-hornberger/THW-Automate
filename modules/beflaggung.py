@@ -52,7 +52,7 @@ def run(cfg: Config):
 
 		try:
 			with MailBox(config.imap.host, config.imap.port).login(config.imap.username, config.imap.password, config.imap.folder) as mailbox:
-				logger.info('new connection')
+				logger.debug('new connection')
 
 				while con_live_time < config.max_con_time:
 					try:
