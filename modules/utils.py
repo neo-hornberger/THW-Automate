@@ -24,4 +24,4 @@ def synchronized(func):
 	return inner
 
 def cached(func):
-	return wraps(cache(func))(func)
+	return wraps(func)(cache(func))
