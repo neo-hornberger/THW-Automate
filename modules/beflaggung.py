@@ -60,18 +60,25 @@ def run(cfg: Config):
 
 						logger.debug('IDLE responses: %s', responses)
 
-						if responses:
+						if len(responses) > 0:
 							for msg in mailbox.fetch(AND(from_=config.filter_from, seen=False), charset='utf-8', mark_seen=False):
 								logger.info('found message: %s %s %s', msg.subject, msg.from_, msg.date)
 
-								ics_url = re.search(r'<a href="([^"]+\?view=renderBMIWebICS)"', msg.html).group(1)
-								ics = requests.get(ics_url).text
+								ics_url = re.search(r'<a href="(([^"]+)\?view=renderBMIWebICS)"', msg.html)
+								if ics_url is None:
+									logger.warning('No ICS URL found in message: %s', msg.subject)
+									continue
+
+								ics = requests.get(ics_url.group(1)).text
 								events = icalevents.events(string_content=ics, start=msg.date, end=msg.date + timedelta(days=365))
 
-								if events:
+								if len(events) > 0:
 									event = events[0]
 
-									message = f'📅 **{event.summary}**\n_{event.start:%A, %d.%m.%Y}_\n\n{event.description}'
+									if event.url is None:
+										event.url = ics_url.group(2)
+
+									message = f'📅 **{event.summary}**\n_{event.start:%A, %d.%m.%Y}_\n\n{event.description}\n\n{event.url}'
 									message += '\n\n_🤖 automatically sent message_'
 									
 									logger.debug('Sending message to Hermine: %s', message)
