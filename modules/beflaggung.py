@@ -98,7 +98,7 @@ def run(cfg: Config):
 										date = event.start.date()
 										start = max(sun.sunrise(observer, date, TIMEZONE).time(), EARLIEST_START_TIME)
 										end = sun.sunset(observer, date, TIMEZONE)
-										message += f'_, {start:%H:%M} – {end:%H:%M}_'
+										message += f' _({start:%H:%M} – {end:%H:%M})_'
 
 									message += f'\n\n{event.description}\n\n{event.url}'
 									message += '\n\n_🤖 automatically sent message_'
