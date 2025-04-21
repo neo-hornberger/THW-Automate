@@ -4,7 +4,8 @@ import re
 import requests
 from imap_tools import MailBox, AND, consts
 from icalevents import icalevents
-from datetime import timedelta
+from datetime import time as dtime, timedelta
+from astral import Degrees, Elevation, Observer, sun
 
 from config import Config, load_toml_data, IMAPConfig, HermineConfig
 from modules.clients import get_hermine_client
@@ -15,6 +16,7 @@ class _Config:
 	hermine: HermineConfig
 
 	filter_from: list[str]
+	location: tuple[Degrees, Degrees, Elevation]|None
 	hermine_channel: int
 
 	max_con_time: int
@@ -28,11 +30,22 @@ class _Config:
 		self.hermine = load_toml_data(data.get('hermine'), cfg.hermine)
 
 		self.filter_from = data.get('filter_from', [])
+
+		loc: dict = data.get('location', {})
+		if loc.get('latitude') is not None and loc.get('longitude') is not None:
+			self.location = (loc['latitude'], loc['longitude'], loc.get('elevation', 0))
+		else:
+			self.location = None
+
 		self.hermine_channel = data['hermine_channel']
 
 		self.max_con_time = data.get('max_con_time', 29 * 60)
 		self.idle_timeout = data.get('idle_timeout', 3 * 60)
 		self.recon_delay = data.get('recon_delay', 60)
+
+
+TIMEZONE = 'Europe/Berlin'
+EARLIEST_START_TIME = dtime(7, 0)
 
 
 logger = logging.getLogger(__name__)
@@ -45,6 +58,7 @@ def run(cfg: Config):
 
 	logger.info('Module configured successfully')
 
+	observer = Observer(latitude=config.location[0], longitude=config.location[1], elevation=config.location[2]) if config.location is not None else None
 	done = False
 	while not done:
 		con_start_time = time.monotonic()
@@ -78,7 +92,15 @@ def run(cfg: Config):
 									if event.url is None:
 										event.url = ics_url.group(2)
 
-									message = f'📅 **{event.summary}**\n_{event.start:%A, %d.%m.%Y}_\n\n{event.description}\n\n{event.url}'
+									message = f'📅 **{event.summary}**\n_{event.start:%A, %d.%m.%Y}_'
+
+									if observer is not None:
+										date = event.start.date()
+										start = max(sun.sunrise(observer, date, TIMEZONE).time(), EARLIEST_START_TIME)
+										end = sun.sunset(observer, date, TIMEZONE)
+										message += f'_, {start:%H:%M} – {end:%H:%M}_'
+
+									message += f'\n\n{event.description}\n\n{event.url}'
 									message += '\n\n_🤖 automatically sent message_'
 									
 									logger.debug('Sending message to Hermine: %s', message)
