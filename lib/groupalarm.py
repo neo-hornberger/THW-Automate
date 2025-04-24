@@ -1,8 +1,10 @@
-from typing import Literal
 import requests
+from typing import Literal
+from typeguard import typechecked
 from datetime import datetime
 
 
+@typechecked
 class GroupalarmClient:
 	base_url: str = 'https://app.groupalarm.com/api/v1'
 	headers = {

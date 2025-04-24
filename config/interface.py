@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from typing import TypeAlias, Any
+from typeguard import typechecked
 from collections.abc import Callable
 import datetime
 
@@ -6,6 +9,7 @@ import datetime
 TOMLDict: TypeAlias = dict[str, "TOMLData"]
 TOMLData: TypeAlias = TOMLDict|list["TOMLData"]|str|int|float|bool|datetime.datetime|datetime.date|datetime.time
 
+@typechecked
 class IConfig:
 	def from_toml(self, data: TOMLDict) -> None:
 		raise NotImplementedError

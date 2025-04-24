@@ -1,6 +1,8 @@
 import logging
 import time
-from schedule import Scheduler, Job
+from typeguard import check_type
+from typing import SupportsFloat
+from schedule import Scheduler
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -14,7 +16,7 @@ class _Config:
 	groupalarm: GroupalarmConfig
 
 	scheduled_time: str
-	reminder_time: int
+	reminder_time: timedelta
 	event_filters: list[str]
 	groupalarm_label: int|None
 	hermine_channel: int
@@ -26,7 +28,10 @@ class _Config:
 		self.groupalarm = load_toml_data(data.get('groupalarm'), cfg.groupalarm)
 
 		self.scheduled_time = data.get('scheduled_time', '12:00')
-		self.reminder_time = data.get('reminder_time', 10)
+
+		reminder_time = check_type(data.get('reminder_time', 10), SupportsFloat)
+		self.reminder_time = timedelta(hours=float(reminder_time))
+
 		self.event_filters = data.get('event_filters', [])
 		self.groupalarm_label = data.get('groupalarm_label')
 		self.hermine_channel = data['hermine_channel']

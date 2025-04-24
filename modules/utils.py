@@ -1,3 +1,4 @@
+from typeguard import typechecked
 from functools import wraps, cache
 from datetime import datetime, timedelta
 from threading import Lock
@@ -5,6 +6,7 @@ from schedule import Job, Scheduler
 from collections.abc import Callable
 
 
+@typechecked
 def parse_datetime(date: str) -> datetime:
 	if date[-1] == 'Z':
 		date = date[:-1] + '+00:00'
@@ -27,6 +29,7 @@ def synchronized(func):
 def cached(func):
 	return wraps(func)(cache(func))
 
+@typechecked
 def onetime_job(scheduler: Scheduler, time: datetime, job_func: Callable, *args, **kwargs) -> Job:
 	job = Job(1, scheduler).week
 	job.do(job_func, *args, **kwargs)

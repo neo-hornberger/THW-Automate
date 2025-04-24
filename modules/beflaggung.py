@@ -2,12 +2,13 @@ import logging
 import time
 import re
 import requests
-from imap_tools import MailBox, AND, consts
+from typeguard import check_type
+from imap_tools import BaseMailBox, MailBox, AND, consts
 from icalevents import icalevents
 from datetime import time as dtime, timedelta
 from astral import Degrees, Elevation, Observer, sun
 
-from config import Config, load_toml_data, IMAPConfig, HermineConfig
+from config import Config, load_toml_data, IMAPConfig, HermineConfig, TOMLDict
 from modules.clients import get_hermine_client
 
 
@@ -31,9 +32,13 @@ class _Config:
 
 		self.filter_from = data.get('filter_from', [])
 
-		loc: dict = data.get('location', {})
+		loc = check_type(data.get('location', {}), TOMLDict)
 		if loc.get('latitude') is not None and loc.get('longitude') is not None:
-			self.location = (loc['latitude'], loc['longitude'], loc.get('elevation', 0))
+			self.location = (
+				check_type(loc['latitude'], Degrees),
+				check_type(loc['longitude'], Degrees),
+				check_type(loc.get('elevation', 0), Elevation),
+			)
 		else:
 			self.location = None
 
@@ -59,6 +64,40 @@ def run(cfg: Config):
 	logger.info('Module configured successfully')
 
 	observer = Observer(latitude=config.location[0], longitude=config.location[1], elevation=config.location[2]) if config.location is not None else None
+	def _run(mailbox: BaseMailBox):
+		for msg in mailbox.fetch(AND(from_=config.filter_from, seen=False), charset='utf-8', mark_seen=False):
+			logger.info('found message: %s %s %s', msg.subject, msg.from_, msg.date)
+
+			ics_url = re.search(r'<a href="(([^"]+)\?view=renderBMIWebICS)"', msg.html)
+			if ics_url is None:
+				logger.warning('No ICS URL found in message: %s', msg.subject)
+				continue
+
+			ics = requests.get(ics_url.group(1)).text
+			events = icalevents.events(string_content=ics, start=msg.date, end=msg.date + timedelta(days=365))
+
+			if len(events) > 0:
+				event = events[0]
+
+				if event.url is None:
+					event.url = ics_url.group(2)
+
+				message = f'📅 **{event.summary}**\n_{event.start:%A, %d.%m.%Y}_'
+
+				if observer is not None:
+					date = event.start.date()
+					start = max(sun.sunrise(observer, date, TIMEZONE).time(), EARLIEST_START_TIME)
+					end = sun.sunset(observer, date, TIMEZONE)
+					message += f' _({start:%H:%M} – {end:%H:%M})_'
+
+				message += f'\n\n{event.description}\n\n{event.url}'
+				message += '\n\n_🤖 automatically sent message_'
+				
+				logger.debug('Sending message to Hermine: %s', message)
+				hermine.send_msg(('channel', config.hermine_channel), message, is_styled=True)
+
+			mailbox.flag(msg.uid, consts.MailMessageFlags.SEEN, True)
+
 	done = False
 	while not done:
 		con_start_time = time.monotonic()
@@ -68,6 +107,9 @@ def run(cfg: Config):
 			with MailBox(config.imap.host, config.imap.port).login(config.imap.username, config.imap.password, config.imap.folder) as mailbox:
 				logger.debug('new connection')
 
+				# fetch messages that have been received while the connection was down
+				_run(mailbox)
+
 				while con_live_time < config.max_con_time:
 					try:
 						responses = mailbox.idle.wait(timeout=config.idle_timeout)
@@ -75,38 +117,7 @@ def run(cfg: Config):
 						logger.debug('IDLE responses: %s', responses)
 
 						if len(responses) > 0:
-							for msg in mailbox.fetch(AND(from_=config.filter_from, seen=False), charset='utf-8', mark_seen=False):
-								logger.info('found message: %s %s %s', msg.subject, msg.from_, msg.date)
-
-								ics_url = re.search(r'<a href="(([^"]+)\?view=renderBMIWebICS)"', msg.html)
-								if ics_url is None:
-									logger.warning('No ICS URL found in message: %s', msg.subject)
-									continue
-
-								ics = requests.get(ics_url.group(1)).text
-								events = icalevents.events(string_content=ics, start=msg.date, end=msg.date + timedelta(days=365))
-
-								if len(events) > 0:
-									event = events[0]
-
-									if event.url is None:
-										event.url = ics_url.group(2)
-
-									message = f'📅 **{event.summary}**\n_{event.start:%A, %d.%m.%Y}_'
-
-									if observer is not None:
-										date = event.start.date()
-										start = max(sun.sunrise(observer, date, TIMEZONE).time(), EARLIEST_START_TIME)
-										end = sun.sunset(observer, date, TIMEZONE)
-										message += f' _({start:%H:%M} – {end:%H:%M})_'
-
-									message += f'\n\n{event.description}\n\n{event.url}'
-									message += '\n\n_🤖 automatically sent message_'
-									
-									logger.debug('Sending message to Hermine: %s', message)
-									hermine.send_msg(('channel', config.hermine_channel), message, is_styled=True)
-
-								mailbox.flag(msg.uid, consts.MailMessageFlags.SEEN, True)
+							_run(mailbox)
 
 						con_live_time = time.monotonic() - con_start_time
 					except KeyboardInterrupt:
