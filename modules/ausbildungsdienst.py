@@ -98,12 +98,11 @@ def run(cfg: Config):
 		
 		return event_starts
 	
-	reminder_time = timedelta(hours=config.reminder_time)
 	def _weekly_run():
 		_update()
 		event_starts = _run(timedelta(weeks=1))
 		for event_start in event_starts:
-			onetime_job(scheduler, (event_start - reminder_time).replace(tzinfo=None), _run, reminder_time)
+			onetime_job(scheduler, (event_start - config.reminder_time).replace(tzinfo=None), _run, config.reminder_time)
 
 	scheduler = Scheduler()
 	scheduler.every().sunday.at(config.scheduled_time).do(_weekly_run)
