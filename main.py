@@ -1,3 +1,5 @@
+from modules.module import Module, ModuleConfig
+
 import logging
 from threading import Thread
 
@@ -12,12 +14,15 @@ def main():
 	logging.info('Starting…')
 	logging.debug('Logging level is set to %s', logging.getLevelName(config.logging.level))
 
-	targets = [
-		beflaggung.run,
-		ausbildungsdienst.run,
-		alarmierung.run,
+	modules: list[tuple[Module, ModuleConfig]] = [
+		(beflaggung.Beflaggung('beflaggung'), beflaggung._Config()),
+		(ausbildungsdienst.Ausbildungsdienst('ausbildungsdienst'), ausbildungsdienst._Config()),
+		(alarmierung.Alarmierung('alarmierung'), alarmierung._Config()),
 	]
-	threads = list(map(lambda target: Thread(name=f'Thread-{target.__module__}', target=target, args=(config,), daemon=True), targets))
+	for module, cfg in modules:
+		cfg.load(config.module_data(module.name), config)
+		module.update_config(cfg)
+	threads = list(map(lambda module: Thread(name=f'Thread-{module[0].__module__}', target=module[0].run, daemon=True), modules))
 
 	for thread in threads:
 		logging.debug('Starting thread "%s"…', thread.name)

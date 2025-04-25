@@ -1,6 +1,8 @@
-import paho.mqtt.client as mqtt
-import logging
 from typeguard import typechecked
+
+import logging
+from paho.mqtt.client import Client as MQTTClient
+from paho.mqtt.enums import CallbackAPIVersion
 
 from .utils import synchronized, cached
 from lib.hermine import StashCatClient
@@ -35,10 +37,10 @@ def get_groupalarm_client(api_key: str) -> GroupalarmClient:
 @synchronized
 @cached
 @typechecked
-def get_mqtt_client(host: str, port: int, use_ssl: bool, username: str, password: str, client_id: str) -> mqtt.Client:
+def get_mqtt_client(host: str, port: int, use_ssl: bool, username: str, password: str, client_id: str) -> MQTTClient:
 	logging.info('Initializing MQTT client for user "%s"…', username)
 
-	client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id)
+	client = MQTTClient(CallbackAPIVersion.VERSION2, client_id)
 	client.username_pw_set(username, password)
 	if use_ssl:
 		client.tls_set_context()
