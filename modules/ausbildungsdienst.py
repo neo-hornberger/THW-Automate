@@ -1,4 +1,5 @@
 from typing import SupportsFloat
+from collections.abc import Iterator
 
 import time
 from schedule import Scheduler
@@ -45,25 +46,7 @@ class Ausbildungsdienst(Module[_Config]):
 		self.scheduler = Scheduler()
 
 	def run(self) -> None:
-		def _run(timespan: timedelta) -> set[datetime]:
-			event_starts = set()
-
-			data = self.groupalarm.get_appointments(start=datetime.now(), end=datetime.now() + timespan, type='organization')
-			events = [event for event in data if _filter_events(event, self.config.event_filters)]
-			for event in events:
-				event_start = self._handle_event(event)
-				if event_start is not None:
-					event_starts.add(event_start)
-			
-			return event_starts
-		
-		def _weekly_run():
-			self._update_labels()
-			event_starts = _run(timedelta(weeks=1))
-			for event_start in event_starts:
-				onetime_job(self.scheduler, (event_start - self.config.reminder_time).replace(tzinfo=None), _run, self.config.reminder_time)
-
-		self.scheduler.every().sunday.at(self.config.scheduled_time).do(_weekly_run)
+		self.scheduler.every().sunday.at(self.config.scheduled_time).do(self._weekly_run)
 
 		self.scheduler.run_all()
 		while True:
@@ -74,6 +57,23 @@ class Ausbildungsdienst(Module[_Config]):
 			time.sleep(idle_seconds)
 		
 		self.logger.info('Module finished!')
+
+	def _run(self, timespan: timedelta) -> set[datetime]:
+		event_starts = set()
+
+		data = self.groupalarm.get_appointments(start=datetime.now(), end=datetime.now() + timespan, type='organization')
+		for event in self._filter_events(data):
+			event_start = self._handle_event(event)
+			if event_start is not None:
+				event_starts.add(event_start)
+		
+		return event_starts
+	
+	def _weekly_run(self):
+		self._update_labels()
+		event_starts = self._run(timedelta(weeks=1))
+		for event_start in event_starts:
+			onetime_job(self.scheduler, (event_start - self.config.reminder_time).replace(tzinfo=None), self._run, self.config.reminder_time)
 	
 	def _update_labels(self) -> None:
 		self.label_persons.clear()
@@ -97,7 +97,7 @@ class Ausbildungsdienst(Module[_Config]):
 		start = parse_datetime(event['startDate']).astimezone(tz)
 		end = parse_datetime(event['endDate']).astimezone(tz)
 
-		participants = [person for person in event['participants'] if _filter_participants(person, self.label_persons.keys())]
+		participants = self._filter_participants(event['participants'])
 		if len(participants) == 0:
 			return None
 
@@ -118,15 +118,17 @@ class Ausbildungsdienst(Module[_Config]):
 
 		return start
 
-def _filter_events(event, filters: list[str]) -> bool:
-	if len(filters) == 0:
-		return True
-	return event['name'] in filters
+	def _filter_events(self, events: list) -> Iterator:
+		filters = self.config.event_filters
+		if len(filters) == 0:
+			return iter(events)
+		return (event for event in events if event['name'] in filters)
 
-def _filter_participants(participant, filters) -> bool:
-	if len(filters) == 0:
-		return True
-	return participant['userID'] in filters
+	def _filter_participants(self, participants: list) -> list:
+		filters = self.label_persons.keys()
+		if len(filters) == 0:
+			return participants
+		return [person for person in participants if person['userID'] in filters]
 
 def _feedbackStatus(participant) -> str:
 	if participant['feedback'] == 0:
