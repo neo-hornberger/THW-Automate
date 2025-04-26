@@ -13,6 +13,7 @@ class _Config(ModuleConfig):
 	mqtt: MQTTConfig
 
 	topic: str
+	groupalarm_unit: int|None
 	groupalarm_label: int|None
 	hermine_channel: int
 
@@ -21,6 +22,7 @@ class _Config(ModuleConfig):
 		self.mqtt = load_toml_data(data.get('mqtt'), cfg.mqtt)
 
 		self.set_value('topic', data)
+		self.set_value('groupalarm_unit', data, default=None)
 		self.set_value('groupalarm_label', data, default=None)
 		self.set_value('hermine_channel', data)
 
@@ -43,34 +45,53 @@ class Alarmierung(Module[_Config]):
 		
 		@self.mqtt.message_callback()
 		def _(client: MQTTClient, userdata, msg: MQTTMessage):
-			data = json.loads(msg.payload.decode())
-			time = parse_datetime(data['event']['startDate'])
-
-			opt_content = data.get('optionalContent')
-			location = None
-			if opt_content is not None:
-				lat = float(opt_content['latitude'])
-				lon = float(opt_content['longitude'])
-				location = (
-					lat,
-					lon,
-					opt_content['address'],
-					_format_mgrs(lat, lon),
-				)
-			
-			self.logger.info('Received message for event: %s', data['event']['name'])
-
-			message = f'🚨 **{data["event"]["name"]}**\n_{data["event"]["severity"]["icon"]} {data["event"]["severity"]["name"]}_\n\n{data["message"]}'
-			if location is not None:
-				message += f'\n\n_{location[2]}_\n_{location[3]}_\n_{location[0]}°N {location[1]}°O_'
-			message += '\n\n_🤖 automatically sent message_'
-
-			self.logger.debug('Sending message to Hermine: %s', message)
-			self.hermine.send_msg(('channel', self.config.hermine_channel), message, location=location, is_styled=True)
+			self._handle_message(json.loads(msg.payload.decode()))
 
 		self.mqtt.loop_forever(retry_first_connection=True)
 
 		self.logger.info('Module finished!')
+	
+	def _handle_message(self, data: dict) -> None:
+		if any(conf is not None for conf in [
+			self.config.groupalarm_unit,
+			self.config.groupalarm_label,
+		]):
+			is_ok: bool = False
+			
+			if self.config.groupalarm_unit is not None:
+				if self.config.groupalarm_unit in (int(unit['id']) for unit in data['alarmResources']['units']):
+					is_ok = True
+			if self.config.groupalarm_label is not None:
+				if self.config.groupalarm_label in (int(label['label']['id']) for label in data['alarmResources']['labels']):
+					is_ok = True
+			
+			if not is_ok:
+				self.logger.debug('Ignoring alarm message "%s"', data['message'])
+				return
+
+		time = parse_datetime(data['event']['startDate'])
+
+		opt_content = data.get('optionalContent')
+		location = None
+		if opt_content is not None:
+			lat = float(opt_content['latitude'])
+			lon = float(opt_content['longitude'])
+			location = (
+				lat,
+				lon,
+				opt_content.get('address', '-' * 15),
+				_format_mgrs(lat, lon),
+			)
+		
+		self.logger.info('Received message for event: %s', data['event']['name'])
+
+		message = f'🚨 **{data["event"]["name"]}**\n_{data["event"]["severity"]["icon"]} {data["event"]["severity"]["name"]}_\n\n{data["message"]}'
+		if location is not None:
+			message += f'\n\n_{location[2]}_\n_{location[3]}_\n_{location[0]}°N {location[1]}°O_'
+		message += '\n\n_🤖 automatically sent message_'
+
+		self.logger.debug('Sending message to Hermine: %s', message)
+		self.hermine.send_msg(('channel', self.config.hermine_channel), message, location=location, is_styled=True)
 
 def _format_mgrs(lat: float, lon: float, precision: int = 5) -> str:
 	if precision < 0 or precision > 5:
