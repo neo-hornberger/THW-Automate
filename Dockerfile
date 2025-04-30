@@ -8,7 +8,7 @@ RUN apt-get install -y --no-install-recommends \
 RUN pip install --user packaging
 
 COPY pyproject.toml /app/pyproject.toml
-RUN pip download --user .
+RUN pip download .
 
 
 FROM python:3.12-slim AS runtime-image
