@@ -5,7 +5,8 @@ RUN apt-get install -y --no-install-recommends \
 	build-essential \
 	gcc
 
-RUN pip install pip-tools packaging
+RUN pip install pip-tools
+RUN pip install --user packaging
 
 COPY pyproject.toml /app/pyproject.toml
 RUN pip-compile -o requirements.txt /app/pyproject.toml
