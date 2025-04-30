@@ -6,7 +6,10 @@ RUN apt-get install -y --no-install-recommends \
 	gcc
 
 RUN pip install pip-tools
-RUN pip install --user packaging
+
+# module 'packaging' is required for 'mgrs' at runtime
+# it has to be forcefully installed because it is also installed by 'pip-tools'
+RUN pip install --user --force packaging
 
 COPY pyproject.toml /app/pyproject.toml
 RUN pip-compile -o requirements.txt /app/pyproject.toml
