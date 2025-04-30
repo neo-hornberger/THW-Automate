@@ -5,5 +5,7 @@ docker-compose.yml
 
 config.toml
 
+.python-version
+uv.lock
 .venv/
 **/__pycache__/*
