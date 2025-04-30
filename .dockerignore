@@ -5,5 +5,5 @@ docker-compose.yml
 
 config.toml
 
+.venv/
 **/__pycache__/*
-

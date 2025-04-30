@@ -1,4 +1,4 @@
 config.toml
 
+.venv/
 **/__pycache__/*
-

@@ -22,6 +22,8 @@ class _Config(ModuleConfig):
 	groupalarm_label: int|None
 	hermine_channel: int
 
+	run_on_startup: bool = False
+
 	def load(self, data: TOMLDict, cfg: Config) -> None:
 		self.hermine = load_toml_data(data.get('hermine'), cfg.hermine)
 		self.groupalarm = load_toml_data(data.get('groupalarm'), cfg.groupalarm)
@@ -31,6 +33,8 @@ class _Config(ModuleConfig):
 		self.set_value('event_filters', data, default=[])
 		self.set_value('groupalarm_label', data, default=None)
 		self.set_value('hermine_channel', data)
+
+		self.set_value('run_on_startup', data, default=False)
 	
 	def _conv_remtime(self, remtime: SupportsFloat) -> timedelta:
 		return timedelta(hours=float(remtime))
@@ -48,7 +52,9 @@ class Ausbildungsdienst(Module[_Config]):
 	def run(self) -> None:
 		self.scheduler.every().sunday.at(self.config.scheduled_time).do(self._weekly_run)
 
-		self.scheduler.run_all()
+		if self.config.run_on_startup:
+			self.scheduler.run_all()
+		
 		while True:
 			self.scheduler.run_pending()
 
