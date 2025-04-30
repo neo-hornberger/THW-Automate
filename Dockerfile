@@ -5,10 +5,11 @@ RUN apt-get install -y --no-install-recommends \
 	build-essential \
 	gcc
 
-RUN pip install --user packaging
+RUN pip install pip-tools packaging
 
 COPY pyproject.toml /app/pyproject.toml
-RUN pip download /app/
+RUN pip-compile -o requirements.txt /app/pyproject.toml
+RUN pip install --user -r requirements.txt
 
 
 FROM python:3.12-slim AS runtime-image
