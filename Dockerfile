@@ -1,4 +1,4 @@
-FROM python:3.10-slim AS compile-image
+FROM python:3.12-slim AS compile-image
 
 RUN apt-get update
 RUN apt-get install -y --no-install-recommends \
@@ -11,7 +11,7 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install --user -r /app/requirements.txt
 
 
-FROM python:3.10-slim AS runtime-image
+FROM python:3.12-slim AS runtime-image
 
 COPY --from=compile-image /root/.local /root/.local
 COPY . /app

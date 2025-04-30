@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from typing import TypeVar, Generic, final
+from typing import final
 
 import logging
 
@@ -16,8 +16,7 @@ class ModuleConfig(IConfig):
 	def load(self, data: TOMLDict, cfg: Config) -> None:
 		...
 
-T = TypeVar('T', bound=ModuleConfig)
-class Module(Generic[T], metaclass=ABCMeta):
+class Module[T: ModuleConfig](metaclass=ABCMeta):
 	def __init__(self, name: str, *, config: T|None = None):
 		self.name = name
 

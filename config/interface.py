@@ -1,16 +1,12 @@
-from __future__ import annotations
-
-from typing import TypeAlias, TypeVar, NewType, final
+from typing import NewType, final
 from typeguard import typechecked, check_type
 from abc import ABCMeta, abstractmethod
 from collections.abc import Callable
 import datetime
 
 
-TOMLDict: TypeAlias = dict[str, "TOMLData"]
-TOMLData: TypeAlias = TOMLDict|list["TOMLData"]|str|int|float|bool|datetime.datetime|datetime.date|datetime.time
-
-X = TypeVar('X')
+type TOMLDict = dict[str, TOMLData]
+type TOMLData = TOMLDict|list[TOMLData]|str|int|float|bool|datetime.datetime|datetime.date|datetime.time
 
 Unknown = NewType('Unknown', object)
 NOT_GIVEN = Unknown(object)
@@ -23,7 +19,7 @@ class IConfig(metaclass=ABCMeta):
 		...
 	
 	@final
-	def set_value(self, attr_name: str, data: TOMLDict, *, key: str|None = None, default: X|None|Unknown = NOT_GIVEN, converter: Callable[[TOMLData], X] = lambda x: x) -> None:
+	def set_value[X](self, attr_name: str, data: TOMLDict, *, key: str|None = None, default: X|None|Unknown = NOT_GIVEN, converter: Callable[[TOMLData], X] = lambda x: x) -> None:
 		key = key or attr_name
 		required = default is NOT_GIVEN
 		try:

@@ -12,14 +12,14 @@ def parse_datetime(date: str) -> datetime:
 		date = date[:-1] + '+00:00'
 	return datetime.fromisoformat(date)
 
-_LOCKS = {}
+_LOCKS: dict[str, Lock] = {}
 def synchronized(func):
 	@wraps(func)
 	def inner(*args, **kwargs):
 		with lock:
 			return func(*args, **kwargs)
 	
-	key = func.__qualname__
+	key = str(func.__qualname__)
 	lock = _LOCKS.get(key)
 	if key not in _LOCKS:
 		lock = _LOCKS[key] = Lock()

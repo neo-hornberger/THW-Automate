@@ -1,4 +1,3 @@
-from typing import TypeVar
 import copy
 import toml
 
@@ -10,8 +9,7 @@ from .groupalarm import GroupalarmConfig
 from .mqtt import MQTTConfig
 
 
-T = TypeVar('T', bound=IConfig)
-def load_toml_data(data: TOMLDict|None, cfg: type[T]|T) -> T:
+def load_toml_data[T: IConfig](data: TOMLDict|None, cfg: type[T]|T) -> T:
 	if isinstance(cfg, IConfig):
 		cfg = copy.deepcopy(cfg)
 	else:
