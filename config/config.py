@@ -38,5 +38,13 @@ class Config:
 		self.groupalarm = load_toml_data(self._data.get('groupalarm'), GroupalarmConfig)
 		self.mqtt = load_toml_data(self._data.get('mqtt'), MQTTConfig)
 
+	def _modules(self) -> TOMLDict:
+		return self._data.get('modules', {})
+
 	def module_data(self, name: str) -> TOMLDict:
-		return self._data.get('modules', {}).get(name, {})
+		return self._modules().get(name, {})
+	
+	def __eq__(self, other) -> bool:
+		if not isinstance(other, Config):
+			return False
+		return self._data == other._data
