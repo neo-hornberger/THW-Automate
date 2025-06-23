@@ -7,6 +7,7 @@ from .imap import IMAPConfig
 from .hermine import HermineConfig
 from .groupalarm import GroupalarmConfig
 from .mqtt import MQTTConfig
+from .caldav import CalDAVConfig
 
 
 def load_toml_data[T: IConfig](data: TOMLDict|None, cfg: type[T]|T) -> T:
@@ -28,6 +29,7 @@ class Config:
 	hermine: HermineConfig
 	groupalarm: GroupalarmConfig
 	mqtt: MQTTConfig
+	caldav: CalDAVConfig
 
 	def __init__(self, fp):
 		self._data = toml.load(fp)
@@ -37,6 +39,7 @@ class Config:
 		self.hermine = load_toml_data(self._data.get('hermine'), HermineConfig)
 		self.groupalarm = load_toml_data(self._data.get('groupalarm'), GroupalarmConfig)
 		self.mqtt = load_toml_data(self._data.get('mqtt'), MQTTConfig)
+		self.caldav = load_toml_data(self._data.get('caldav'), CalDAVConfig)
 
 	def _modules(self) -> TOMLDict:
 		return self._data.get('modules', {})

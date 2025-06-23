@@ -10,18 +10,20 @@ from icalevents import icalevents
 from datetime import time as dtime, timedelta
 from astral import Degrees, Elevation, Observer, sun
 
-from config import Config, load_toml_data, IMAPConfig, HermineConfig, TOMLDict
+from config import Config, load_toml_data, IMAPConfig, HermineConfig, CalDAVConfig, TOMLDict
 from modules.module import ModuleConfig, Module
-from modules.clients import get_hermine_client
+from modules.clients import get_hermine_client, get_caldav_client
 
 
 class _Config(ModuleConfig):
 	imap: IMAPConfig
 	hermine: HermineConfig
+	caldav: CalDAVConfig
 
 	filter_from: list[str]
 	location: tuple[Degrees, Degrees, Elevation]|None
 	hermine_channel: int
+	calendar: str
 
 	max_con_time: int
 	idle_timeout: int
@@ -30,10 +32,12 @@ class _Config(ModuleConfig):
 	def load(self, data: TOMLDict, cfg: Config) -> None:
 		self.imap = load_toml_data(data.get('imap'), cfg.imap)
 		self.hermine = load_toml_data(data.get('hermine'), cfg.hermine)
+		self.caldav = load_toml_data(data.get('caldav'), cfg.caldav)
 
 		self.set_value('filter_from', data, default=[])
 		self.set_value('location', data, converter=self._conv_loc)
 		self.set_value('hermine_channel', data)
+		self.set_value('calendar', data)
 		self.set_value('max_con_time', data, default=29 * 60)
 		self.set_value('idle_timeout', data, default=3 * 60)
 		self.set_value('recon_delay', data, default=60)
@@ -57,6 +61,7 @@ class Beflaggung(Module[_Config]):
 
 	def init(self) -> None:
 		self.hermine = get_hermine_client(self.config.hermine.device_id, self.config.hermine.username, self.config.hermine.password, self.config.hermine.encryption_password)
+		self.caldav = get_caldav_client(self.config.caldav.url, self.config.caldav.username, self.config.caldav.password)
 
 		self.observer = Observer(latitude=self.config.location[0], longitude=self.config.location[1], elevation=self.config.location[2]) if self.config.location is not None else None
 
@@ -129,5 +134,15 @@ class Beflaggung(Module[_Config]):
 			
 			self.logger.debug('Sending message to Hermine: %s', message)
 			self.hermine.send_msg(('channel', self.config.hermine_channel), message, is_styled=True)
+			# FIXME calling save_event currently does not update the event if it already exists
+			self.caldav.principal().calendar(cal_id=self.config.calendar).save_event(**{
+				'uid': event.uid,
+				'summary': event.summary,
+				'description': event.description,
+				'class': 'PRIVATE' if event.private else 'PUBLIC',
+				'dtstart': event.start,
+				'dtend': event.end,
+				'url': event.url,
+			})
 
 		return True
