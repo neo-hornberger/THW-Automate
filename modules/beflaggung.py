@@ -140,9 +140,10 @@ class Beflaggung(Module[_Config]):
 				'summary': event.summary,
 				'description': event.description,
 				'class': 'PRIVATE' if event.private else 'PUBLIC',
-				'dtstart': event.start,
-				'dtend': event.end,
+				'dtstart': event.start.date(),
+				'dtend': event.end.date(),
 				'url': event.url,
+				'transp': 'TRANSPARENT',
 			})
 
 		return True
