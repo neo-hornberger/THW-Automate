@@ -1,4 +1,4 @@
-FROM python:3.12-slim AS compile-image
+FROM python:3.14.0rc1-slim AS compile-image
 
 RUN apt-get update
 RUN apt-get install -y --no-install-recommends \
@@ -16,7 +16,7 @@ RUN pip-compile -o requirements.txt /app/pyproject.toml
 RUN pip install --user -r requirements.txt
 
 
-FROM python:3.12-slim AS runtime-image
+FROM python:3.14.0rc1-slim AS runtime-image
 
 COPY --from=compile-image /root/.local /root/.local
 COPY . /app
