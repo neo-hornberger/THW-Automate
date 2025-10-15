@@ -1,6 +1,7 @@
 import json
 import mgrs
 from paho.mqtt.client import Client as MQTTClient, MQTTMessage
+from paho.mqtt.reasoncodes import ReasonCode
 
 from config import Config, load_toml_data, HermineConfig, MQTTConfig, TOMLDict
 from modules.module import ModuleConfig, Module
@@ -35,13 +36,17 @@ class Alarmierung(Module[_Config]):
 
 	def run(self) -> None:
 		@self.mqtt.connect_callback()
-		def _(client: MQTTClient, userdata, connect_flags, reason_code, properties):
+		def _(client: MQTTClient, userdata, connect_flags, reason_code: ReasonCode, properties):
 			if reason_code == 0:
 				self.logger.debug('Successfully connected to MQTT broker at "%s:%d"', client.host, client.port)
 			else:
-				self.logger.error(f'Failed to connect to MQTT broker: {reason_code}')
+				self.logger.error('Failed to connect to MQTT broker: %s', reason_code)
 			
 			client.subscribe(self.config.topic)
+		
+		@self.mqtt.disconnect_callback()
+		def _(client: MQTTClient, userdata, disconnect_flags, reason_code: ReasonCode, properties):
+			self.logger.debug('Disconnected from MQTT broker: %s', reason_code)
 		
 		@self.mqtt.message_callback()
 		def _(client: MQTTClient, userdata, msg: MQTTMessage):
