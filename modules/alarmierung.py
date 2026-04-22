@@ -78,7 +78,7 @@ class Alarmierung(Module[_Config]):
 
 		opt_content = data.get('optionalContent')
 		location = None
-		if opt_content is not None:
+		if opt_content is not None and opt_content.get('latitude') is not None and opt_content.get('longitude') is not None:
 			lat = float(opt_content['latitude'])
 			lon = float(opt_content['longitude'])
 			location = (
