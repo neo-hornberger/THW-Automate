@@ -4,7 +4,7 @@ import logging
 from threading import Thread
 
 from config import Config, ConfigWatcher
-from modules import beflaggung, ausbildungsdienst, alarmierung
+from modules import beflaggung, ausbildungsdienst, alarmierung, user_interface
 
 
 CONFIG_FILE = 'config.toml'
@@ -21,6 +21,8 @@ def main():
 		(beflaggung.Beflaggung('beflaggung'), beflaggung._Config()),
 		(ausbildungsdienst.Ausbildungsdienst('ausbildungsdienst'), ausbildungsdienst._Config()),
 		(alarmierung.Alarmierung('alarmierung'), alarmierung._Config()),
+
+		(user_interface.UserInterface('user_interface'), user_interface._Config()),
 	]
 	update_config(config, modules)
 	threads = list(map(lambda module: Thread(name=f'Thread-{module[0].__module__}', target=module[0].run, daemon=True), modules))
@@ -30,7 +32,8 @@ def main():
 		thread.start()
 
 	config_watcher = ConfigWatcher(CONFIG_FILE)
-	def on_config_change():
+	@config_watcher.on_change
+	def _():
 		nonlocal config
 		logging.info('Config file change detected…')
 		cfg = load_config(CONFIG_FILE, config)
@@ -39,7 +42,6 @@ def main():
 			return
 		config = cfg
 		update_config(config, modules)
-	config_watcher.on_change(handler=on_config_change)
 
 	manually_interrupted = False
 	try:

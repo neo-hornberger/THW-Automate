@@ -189,7 +189,7 @@ class StashCatClient:
                         bytes.fromhex(message["iv"])
                     ).decode("utf-8")
 
-                if message["location"]["encrypted"]:
+                if message["location"] is not None and message["location"]["encrypted"]:
                     message["location"]["latitude_decrypted"] = _decrypt_aes(
                         bytes.fromhex(message["location"]["latitude"]),
                         conversation_key,
