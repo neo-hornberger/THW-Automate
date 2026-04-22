@@ -13,7 +13,7 @@ RUN pip install --user --force packaging
 
 COPY pyproject.toml /app/pyproject.toml
 RUN pip-compile -o requirements.txt /app/pyproject.toml
-RUN pip install --user -r requirements.txt
+RUN pip install --user --force -r requirements.txt
 
 
 FROM python:3.14-slim AS runtime-image
