@@ -3,7 +3,7 @@ from typeguard import typechecked
 import logging
 from paho.mqtt.client import Client as MQTTClient
 from paho.mqtt.enums import CallbackAPIVersion
-from caldav import DAVClient
+from caldav.davclient import get_davclient, DAVClient
 
 from .utils import synchronized, cached
 from lib.hermine import StashCatClient
@@ -55,7 +55,9 @@ def get_mqtt_client(host: str, port: int, use_ssl: bool, username: str, password
 def get_caldav_client(url: str, username: str, password: str) -> DAVClient:
 	logging.info('Initializing CalDAV client for user "%s"…', username)
 
-	client = DAVClient(url, username=username, password=password)
-	if not client.check_cdav_support():
+	client = get_davclient(url=url, username=username, password=password)
+	if client is None:
+		raise ValueError('Failed to initialize CalDAV client')
+	if not client.supports_caldav():
 		raise ValueError('CalDAV server does not support required features')
 	return client

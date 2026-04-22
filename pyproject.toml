@@ -6,16 +6,16 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "astral~=3.2",
-    "caldav~=2.0.1",
+    "caldav~=3.1.0",
     "icalevents~=0.3.1",
-    "imap-tools~=1.11.0",
-    "mgrs~=1.5.0",
+    "imap-tools~=1.12.1",
+    "mgrs~=1.5.4",
     "paho-mqtt~=2.1.0",
     "pycryptodome~=3.23.0",
-    "python-socketio~=5.14.1",
-    "requests~=2.32.5",
+    "python-socketio~=5.16.1",
+    "requests~=2.33.1",
     "schedule~=1.2.2",
     "toml~=0.10.2",
-    "typeguard~=4.4.4",
+    "typeguard~=4.5.1",
     "watchdog~=6.0.0",
 ]

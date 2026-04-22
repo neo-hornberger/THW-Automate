@@ -135,7 +135,7 @@ class Beflaggung(Module[_Config]):
 			self.logger.debug('Sending message to Hermine: %s', message)
 			self.hermine.send_msg(('channel', self.config.hermine_channel), message, is_styled=True)
 			# FIXME calling save_event currently does not update the event if it already exists
-			self.caldav.principal().calendar(cal_id=self.config.calendar).save_event(**{
+			self.caldav.get_principal().calendar(cal_id=self.config.calendar).add_event(**{
 				'uid': event.uid,
 				'summary': event.summary,
 				'description': event.description,
